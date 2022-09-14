@@ -9,6 +9,7 @@ contract Machine {
     Storage store;
 
     event calledByCall(uint256 first, uint256 second, bool success);
+    event calledByDelegateCall(uint256 first, uint256 second, bool success);
 
     constructor(Storage addr) {
         store = addr;
@@ -24,11 +25,27 @@ contract Machine {
         return store.value();
     }
 
-    function addWithCall(address calculator, uint256 first, uint256 second) public returns (uint256) {
+    function addWithCall(
+        address calculator,
+        uint256 first,
+        uint256 second
+    ) public returns (uint256) {
         (bool success, bytes memory result) = calculator.call(
             abi.encodeWithSignature("add(uint256,uint256)", first, second)
         );
         emit calledByCall(first, second, success);
+        return abi.decode(result, (uint256));
+    }
+
+    function addWithDelegateCall(
+        address calculator,
+        uint256 first,
+        uint256 second
+    ) public returns (uint256) {
+        (bool success, bytes memory result) = calculator.delegatecall(
+            abi.encodeWithSignature("add(uint256,uint256)", first, second)
+        );
+        emit calledByDelegateCall(first, second, success);
         return abi.decode(result, (uint256));
     }
 }

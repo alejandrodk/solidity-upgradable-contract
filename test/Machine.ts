@@ -114,4 +114,67 @@ describe("Machine tests", async () => {
       expect(calculatorUser).equal(machine.address);
     });
   });
+
+  describe("#addWithDelegateCall", () => {
+    it("Should emit event on transfer with call", async () => {
+      const first = 1;
+      const second = 2;
+
+      const { machine, calculator } = await loadFixture(deployMachineFixture);
+
+      await expect(
+        machine.addWithDelegateCall(calculator.address, first, second)
+      )
+        .to.emit(machine, "calledByDelegateCall")
+        .withArgs(first, second, true);
+    });
+
+    it("Should successfully delegateCall to calculator contract", async () => {
+      const first = 1;
+      const second = 2;
+
+      const { machine, calculator, accounts } = await loadFixture(
+        deployMachineFixture
+      );
+      const { owner } = accounts;
+
+      const { from, to } = await machine.addWithDelegateCall(
+        calculator.address,
+        first,
+        second
+      );
+
+      expect(from).equal(owner.address);
+      expect(to).equal(machine.address);
+    });
+
+    it("Should only update caller contract state", async () => {
+      const { machine, calculator } = await loadFixture(deployMachineFixture);
+
+      await machine.addWithDelegateCall(calculator.address, 1, 2);
+
+      const calculatedResult = await calculator.calculateResult();
+      // Only calculateResult in Machine contract should be changed
+      const machineCalculatedResult = await machine.calculateResult();
+
+      expect(calculatedResult).equal(0);
+      expect(machineCalculatedResult).equal(3);
+    });
+
+    it("Should validate user on each context", async () => {
+      const {
+        machine,
+        calculator,
+        accounts: { owner },
+      } = await loadFixture(deployMachineFixture);
+
+      await machine.addWithDelegateCall(calculator.address, 1, 2);
+
+      const machineUser = await machine.user();
+      const calculatorUser = await calculator.user();
+
+      expect(machineUser).equal(owner.address);
+      expect(calculatorUser).equal(ethers.constants.AddressZero);
+    });
+  });
 });
